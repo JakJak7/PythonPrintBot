@@ -15,29 +15,23 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                      level=logging.INFO)
 
 def photo(bot, update):
-#    user = update.message.from_user
     text = update.message.caption
     if text is None:
         text = '20'
-#    print text
     file_id = update.message.photo[-1].file_id
     photo_file = bot.get_file(file_id)
     file_location = 'files/' + file_id + '.jpg'
     photo_file.download(file_location)
     update.message.reply_text('Printing image!')
     r = lighten_image(file_id, '.jpg', text)
-#    print_label(file_id, '.jpg')
 
 def sticker(bot, update):
-#    text = update.message.text
-#    print text
     file_id = update.message.sticker.file_id
     sticker_file = bot.get_file(file_id)
     file_location = 'files/' + file_id + '.webp'
     sticker_file.download(file_location)
     update.message.reply_text('Printing sticker!')
     convert_webp(file_id, file_location)
-#    r = print_label(file_id, '.png')
     r = lighten_image(file_id, '.png', '20')
 
 def convert_webp(file_id, file_location):
@@ -88,8 +82,7 @@ def main():
     print my_ip
     bot = Bot(token=config['BOT_SECRETS']['Token'])
     bot.send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=my_ip)
+    updater.start_polling()
+    updater.idle()
 
 main()
-
-updater.start_polling()
-updater.idle()

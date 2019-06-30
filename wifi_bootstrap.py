@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from subprocess import check_output
-import socket
+import socket, time
 
 def listen_for_connection():
     while (not is_connected()):
@@ -17,6 +17,8 @@ def is_connected():
         socket.create_connection(("www.google.com", 80))
         return True
     except OSError:
+        pass
+    except socket.gaierror:
         pass
     return False
 
