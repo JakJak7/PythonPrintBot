@@ -78,8 +78,8 @@ text_handler = MessageHandler(Filters.text, message)
 dp.add_handler(text_handler)
 
 def main():
-    my_ip = listen_for_connection()
-    print my_ip
+    my_ip = listen_for_connection().decode('utf-8')
+    print(my_ip)
     bot = Bot(token=config['BOT_SECRETS']['Token'])
     bot.send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=my_ip)
     updater.start_polling()

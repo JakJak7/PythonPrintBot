@@ -6,7 +6,7 @@ import socket, time
 
 def listen_for_connection():
     while (not is_connected()):
-        print "sleeping..."
+        print("sleeping...")
         time.sleep(5)
     return get_ip()
 
