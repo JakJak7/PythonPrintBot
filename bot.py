@@ -37,7 +37,7 @@ def sticker(bot, update):
 
 def handle_image(bot, update, file_id, file_extension, percentage):
     file_name = lighten_image(file_id, file_extension, percentage)
-    ask_master(bot, "username:DDD", update.message.chat_id, file_name)
+    ask_master(bot, "username:DDD", update.message.chat_id, file_name, file_id)
     #return print_label(file_name)
 
 def convert_webp(file_id, file_location):
@@ -65,13 +65,13 @@ def message(bot, update):
 def send_text(bot, update, message):
     bot.send_message(chat_id=update.message.chat_id, text=message)
 
-def ask_master(bot, user_name, chat_id, file_name):
+def ask_master(bot, user_name, chat_id, file_name, file_id):
     dataA = str(chat_id)+";"+file_name+";a"
     dataB = str(chat_id)+";"+file_name+";b"
     items = [[InlineKeyboardButton(text="Allow", callback_data=dataA), InlineKeyboardButton(text="Deny", callback_data=dataB)]]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
     message = user_name + "(" + str(chat_id) + ")"
-    bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup)
+    bot.send_photo(chat_id=chat_id, photo=file_id, caption=message, reply_markup=reply_markup)
 
 def send_to_master(text):
     get_bot().send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=text)
