@@ -110,7 +110,11 @@ text_handler = MessageHandler(Filters.text, message)
 dp.add_handler(text_handler)
 
 def callback_handler(bot, query):
-    print(query.callback_query.data)
+    # hides inline buttons
+    message_id = query.callback_query.message.message_id
+    chat_id = query.callback_query.message.chat_id
+    bot.edit_message_reply_markup(chat_id, message_id)
+
     things = query.callback_query.data.split(';')
     if (things[0] == "a"):
         print_label(things[1], things[2], things[3])
