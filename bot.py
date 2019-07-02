@@ -3,12 +3,10 @@
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton
-from PIL import Image
 from subprocess import call
 import requests
 import logging
 import configparser
-import json
 
 from wifi_bootstrap import listen_for_connection
 
@@ -16,34 +14,53 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                      level=logging.INFO)
 
 def photo(bot, update):
-    text = update.message.caption
-    if text is None:
-        text = '20'
+    #text = update.message.caption
+    #if text is None:
+    #    text = '20'
     file_id = update.message.photo[-1].file_id
-    photo_file = bot.get_file(file_id)
-    file_location = 'files/' + file_id + '.jpg'
-    photo_file.download(file_location)
-    #update.message.reply_text('Printing image!')
-    handle_image(bot, update, file_id, '.jpg', text)
+    update.message.reply_text('Queueing image...')
+    handle_image(bot, update, file_id, False)
 
 def sticker(bot, update):
     file_id = update.message.sticker.file_id
-    sticker_file = bot.get_file(file_id)
-    file_location = 'files/' + file_id + '.webp'
-    sticker_file.download(file_location)
-    #update.message.reply_text('Printing sticker!')
-    convert_webp(file_id, file_location)
-    handle_image(bot, update, file_id, '.png', '20')
+    update.message.reply_text('Queueing sticker...')
+    handle_image(bot, update, file_id, True)
 
-def handle_image(bot, update, file_id, file_extension, percentage):
-    file_name = lighten_image(file_id, file_extension, percentage)
-    ask_master(bot, "username:DDD", update.message.chat_id, file_name)
-    #return print_label(file_name)
+def handle_image(bot, update, file_id, is_sticker):
+    ask_master(bot, update.message.chat.username, update.message.chat_id, file_id, is_sticker)
 
 def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
 
-def print_label(file_name):
+def ask_master(bot, user_name, chat_id, file_id, is_sticker):
+    base_string = str(chat_id)+";"+file_id+";"+str(is_sticker)
+    dataA = "a;"+base_string
+    dataB = "b;"+base_string
+    items = [[InlineKeyboardButton(text="Allow", callback_data=dataA), InlineKeyboardButton(text="Deny", callback_data=dataB)]]
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
+    message = user_name + "(" + str(chat_id) + ")"
+    bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup)
+
+def print_label(chat_id, file_id, is_sticker):
+    if (is_sticker == 'True'):
+        file_extension = '.webp'
+    else:
+        file_extension = '.jpg'
+
+    file_location = 'files/' + file_id + file_extension
+    image_file = get_bot().get_file(file_id)
+    image_file.download(file_location)
+    if (is_sticker == 'True'):
+        convert_webp(file_id, file_location)
+        file_extension = '.png'
+
+    file_name = lighten_image(file_id, file_extension, '20')
+
+    if (is_sticker == 'True'):
+        send_text(chat_id, 'Printing sticker!')
+    else:
+        send_text(chat_id, 'Printing image!')
+
     url = config['BOT_SECRETS']['BaseUrl'] + 'api/print/image'
     file = {'upload': open('files/' + file_name, 'rb')}
     r = requests.post(url, files=file)
@@ -65,16 +82,11 @@ def message(bot, update):
 def send_text(bot, update, message):
     bot.send_message(chat_id=update.message.chat_id, text=message)
 
-def ask_master(bot, user_name, chat_id, file_name):
-    dataA = str(chat_id)+";"+file_name+";a"
-    dataB = str(chat_id)+";"+file_name+";b"
-    items = [[InlineKeyboardButton(text="Allow", callback_data=dataA), InlineKeyboardButton(text="Deny", callback_data=dataB)]]
-    reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
-    message = user_name + "(" + str(chat_id) + ")"
-    bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup)
-
 def send_to_master(text):
     get_bot().send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=text)
+
+def send_text(chat_id, message):
+    get_bot().send_message(chat_id=chat_id, text=message)
 
 def get_bot():
     return Bot(token=config['BOT_SECRETS']['Token'])
@@ -100,8 +112,8 @@ dp.add_handler(text_handler)
 def callback_handler(bot, query):
     print(query.callback_query.data)
     things = query.callback_query.data.split(';')
-    if (things[2] == "a"):
-        print_label(things[1])
+    if (things[0] == "a"):
+        print_label(things[1], things[2], things[3])
 
 dp.add_handler(CallbackQueryHandler(callback_handler))
 
