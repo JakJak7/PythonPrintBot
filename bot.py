@@ -36,9 +36,9 @@ def ask_master(bot, user_name, chat_id, file_id, is_sticker):
     base_string = file_id+";"+str(is_sticker)
     dataA = "a;"+base_string
     dataB = "b;"+base_string
-    items = [[InlineKeyboardButton(text="Allow", callback_data=dataA), InlineKeyboardButton(text="Deny", callback_data=dataB)]]
+    items = [[InlineKeyboardButton(text="Approve", callback_data=dataA), InlineKeyboardButton(text="Reject", callback_data=dataB)]]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
-    message = user_name + "(" + str(chat_id) + ")"
+    message = "@"+user_name + " (" + str(chat_id) + ")"
     bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup)
 
 def print_label(chat_id, file_id, is_sticker):
@@ -113,10 +113,19 @@ def callback_handler(bot, query):
     # hides inline buttons
     message_id = query.callback_query.message.message_id
     chat_id = query.callback_query.message.chat_id
-    bot.edit_message_reply_markup(chat_id, message_id)
+    bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id)
 
     things = query.callback_query.data.split(';')
-    if (things[0] == "a"):
+    is_approved = things[0] == "a"
+
+    message = query.callback_query.message.text
+    if (is_approved):
+        message = "Approved! " + message
+    else:
+        message = "Rejected! " + message
+    bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
+
+    if (is_approved):
         print_label(chat_id, things[1], things[2])
 
 dp.add_handler(CallbackQueryHandler(callback_handler))
