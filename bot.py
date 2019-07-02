@@ -19,7 +19,7 @@ def photo(bot, update):
     #    text = '20'
     file_id = update.message.photo[-1].file_id
     update.message.reply_text('Queueing image...')
-    handle_image(bot, update, file_id, False)
+    handle_image(bot, update, file_id, "F")
 
 def sticker(bot, update):
     file_id = update.message.sticker.file_id
@@ -33,7 +33,7 @@ def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
 
 def ask_master(bot, user_name, chat_id, file_id, is_sticker):
-    base_string = str(chat_id)+";"+file_id+";"+str(is_sticker)
+    base_string = file_id+";"+str(is_sticker)
     dataA = "a;"+base_string
     dataB = "b;"+base_string
     items = [[InlineKeyboardButton(text="Allow", callback_data=dataA), InlineKeyboardButton(text="Deny", callback_data=dataB)]]
@@ -117,7 +117,7 @@ def callback_handler(bot, query):
 
     things = query.callback_query.data.split(';')
     if (things[0] == "a"):
-        print_label(things[1], things[2], things[3])
+        print_label(chat_id, things[1], things[2])
 
 dp.add_handler(CallbackQueryHandler(callback_handler))
 
