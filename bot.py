@@ -18,16 +18,17 @@ def photo(bot, update):
     #if text is None:
     #    text = '20'
     file_id = update.message.photo[-1].file_id
-    update.message.reply_text('Queueing image...')
     handle_image(bot, update, file_id, False)
 
 def sticker(bot, update):
     file_id = update.message.sticker.file_id
-    update.message.reply_text('Queueing sticker...')
     handle_image(bot, update, file_id, True)
 
 def handle_image(bot, update, file_id, is_sticker):
-    ask_master(bot, update.message.chat.username, update.message.chat_id, file_id, is_sticker)
+    if (str(update.message.chat_id) == config['BOT_SECRETS']['MasterUserId']):
+        print_label(update.message.chat_id, file_id, is_sticker)
+    else:
+        ask_master(bot, update.message.chat.username, update.message.chat_id, file_id, is_sticker)
 
 def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
@@ -38,15 +39,16 @@ def ask_master(bot, user_name, chat_id, file_id, is_sticker):
     dataB = "b;"+base_string
     items = [[InlineKeyboardButton(text="Approve", callback_data=dataA), InlineKeyboardButton(text="Reject", callback_data=dataB)]]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
+    master_user_id = config['BOT_SECRETS']['MasterUserId']
     if (is_sticker):
-        bot.send_sticker(chat_id=config['BOT_SECRETS']['MasterUserId'], sticker=file_id)
+        bot.send_message(chat_id=chat_id, text="Queueing sticker...")
+        bot.send_sticker(chat_id=master_user_id, sticker=file_id)
         message = "Sticker from @"+user_name + " (" + str(chat_id) + ")"
-        bot.send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=message, reply_markup=reply_markup)
+        bot.send_message(chat_id=master_user_id, text=message, reply_markup=reply_markup)
     else:
+        bot.send_message(chat_id=chat_id, text="Queueing photo...")
         message = "@"+user_name + " (" + str(chat_id) + ")"
-        bot.send_photo(chat_id=config['BOT_SECRETS']['MasterUserId'], photo=file_id, caption=message, reply_markup=reply_markup)
-
-    #bot.send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=message, reply_markup=reply_markup)
+        bot.send_photo(chat_id=master_user_id, photo=file_id, caption=message, reply_markup=reply_markup)
 
 def print_label(chat_id, file_id, is_sticker):
     if (is_sticker):
