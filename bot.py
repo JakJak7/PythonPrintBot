@@ -19,7 +19,7 @@ def photo(bot, update):
     #    text = '20'
     file_id = update.message.photo[-1].file_id
     update.message.reply_text('Queueing image...')
-    handle_image(bot, update, file_id, "F")
+    handle_image(bot, update, file_id, False)
 
 def sticker(bot, update):
     file_id = update.message.sticker.file_id
@@ -33,16 +33,23 @@ def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
 
 def ask_master(bot, user_name, chat_id, file_id, is_sticker):
-    base_string = file_id+";"+str(is_sticker)
+    base_string = ("T" if is_sticker else "F")+";"+file_id
     dataA = "a;"+base_string
     dataB = "b;"+base_string
     items = [[InlineKeyboardButton(text="Approve", callback_data=dataA), InlineKeyboardButton(text="Reject", callback_data=dataB)]]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
-    message = "@"+user_name + " (" + str(chat_id) + ")"
-    bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup)
+    if (is_sticker):
+        bot.send_sticker(chat_id=config['BOT_SECRETS']['MasterUserId'], sticker=file_id)
+        message = "Sticker from @"+user_name + " (" + str(chat_id) + ")"
+        bot.send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=message, reply_markup=reply_markup)
+    else:
+        message = "@"+user_name + " (" + str(chat_id) + ")"
+        bot.send_photo(chat_id=config['BOT_SECRETS']['MasterUserId'], photo=file_id, caption=message, reply_markup=reply_markup)
+
+    #bot.send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=message, reply_markup=reply_markup)
 
 def print_label(chat_id, file_id, is_sticker):
-    if (is_sticker == 'True'):
+    if (is_sticker):
         file_extension = '.webp'
     else:
         file_extension = '.jpg'
@@ -50,13 +57,13 @@ def print_label(chat_id, file_id, is_sticker):
     file_location = 'files/' + file_id + file_extension
     image_file = get_bot().get_file(file_id)
     image_file.download(file_location)
-    if (is_sticker == 'True'):
+    if (is_sticker):
         convert_webp(file_id, file_location)
         file_extension = '.png'
 
     file_name = lighten_image(file_id, file_extension, '20')
 
-    if (is_sticker == 'True'):
+    if (is_sticker):
         send_text(chat_id, 'Printing sticker!')
     else:
         send_text(chat_id, 'Printing image!')
@@ -116,17 +123,25 @@ def callback_handler(bot, query):
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id)
 
     things = query.callback_query.data.split(';')
+
     is_approved = things[0] == "a"
-
-    message = query.callback_query.message.text
     if (is_approved):
-        message = "Approved! " + message
+        prefix = "Approved! "
     else:
-        message = "Rejected! " + message
-    bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
+        prefix = "Rejected! "
+
+    is_sticker = things[1] == "T"
+    if (is_sticker):
+        message = prefix + query.callback_query.message.text
+        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
+        file_id = things[2]
+    else:
+        message = prefix + query.callback_query.message.caption
+        bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=message)
+        file_id = query.callback_query.message.photo[-1].file_id
 
     if (is_approved):
-        print_label(chat_id, things[1], things[2])
+        print_label(chat_id, file_id, is_sticker)
 
 dp.add_handler(CallbackQueryHandler(callback_handler))
 
