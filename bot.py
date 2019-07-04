@@ -34,7 +34,7 @@ def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
 
 def ask_master(bot, user_name, chat_id, file_id, is_sticker):
-    base_string = ("T" if is_sticker else "F")+";"+file_id
+    base_string = ("T" if is_sticker else "F")+";"+str(chat_id)+";"+file_id
     dataA = "a;"+base_string
     dataB = "b;"+base_string
     items = [[InlineKeyboardButton(text="Approve", callback_data=dataA), InlineKeyboardButton(text="Reject", callback_data=dataB)]]
@@ -132,18 +132,19 @@ def callback_handler(bot, query):
     else:
         prefix = "Rejected! "
 
+    sender_chat_id = things[2]
     is_sticker = things[1] == "T"
     if (is_sticker):
         message = prefix + query.callback_query.message.text
         bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
-        file_id = things[2]
+        file_id = things[3]
     else:
         message = prefix + query.callback_query.message.caption
         bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=message)
         file_id = query.callback_query.message.photo[-1].file_id
 
     if (is_approved):
-        print_label(chat_id, file_id, is_sticker)
+        print_label(sender_chat_id, file_id, is_sticker)
 
 dp.add_handler(CallbackQueryHandler(callback_handler))
 
