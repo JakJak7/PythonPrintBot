@@ -28,7 +28,12 @@ def handle_image(bot, update, file_id, is_sticker):
     if (str(update.message.chat_id) == config['BOT_SECRETS']['MasterUserId']):
         print_label(update.message.chat_id, file_id, is_sticker)
     else:
-        ask_master(bot, update.message.chat.username, update.message.chat_id, file_id, is_sticker)
+        username = ""
+        if (update.message.chat.username):
+            username = update.message.chat.username
+        else:
+            username = update.message.chat.first_name + " " + update.message.chat.last_name
+        ask_master(bot, username, update.message.chat_id, file_id, is_sticker)
 
 def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
