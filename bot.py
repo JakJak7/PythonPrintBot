@@ -30,7 +30,10 @@ def handle_image(bot, update, file_id, is_sticker):
     else:
         username = ""
         if (update.message.chat.username is None):
-            username = update.message.chat.first_name + " " + update.message.chat.last_name
+            if (update.message.chat.first_name is not None):
+                username = update.message.chat.first_name
+            if (update.message.chat.last_name is not None):
+                username = username + " " + update.message.chat.last_name
         else:
             username = "@" + update.message.chat.username
         ask_master(bot, username, update.message.chat_id, file_id, is_sticker)
