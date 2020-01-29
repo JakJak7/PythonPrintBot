@@ -42,19 +42,17 @@ def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
 
 def ask_master(context: CallbackContext, user_name, chat_id, file_id, is_sticker):
-    base_string = ("T" if is_sticker else "F")+";"+str(chat_id)+";"
-    if (is_sticker):
-        base_string = base_string+file_id
+    base_string = ("T" if is_sticker else "F")+";"+str(chat_id)
     dataA = "a;"+base_string
     dataB = "b;"+base_string
-    print(file_id)
+
     items = [[InlineKeyboardButton(text="Approve", callback_data=dataA), InlineKeyboardButton(text="Reject", callback_data=dataB)]]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
     master_user_id = config['BOT_SECRETS']['MasterUserId']
     if (is_sticker):
         context.bot.send_message(chat_id=chat_id, text="Queueing sticker...")
         context.bot.send_sticker(chat_id=master_user_id, sticker=file_id)
-        message = "Sticker from "+user_name + " (" + str(chat_id) + ")"
+        message = file_id+"#\nSticker from "+user_name + " (" + str(chat_id) + ")"
         context.bot.send_message(chat_id=master_user_id, text=message, reply_markup=reply_markup)
     else:
         context.bot.send_message(chat_id=chat_id, text="Queueing photo...")
@@ -146,13 +144,13 @@ def callback_handler(update: Update, context: CallbackContext):
     sender_chat_id = things[2]
     is_sticker = things[1] == "T"
     if (is_sticker):
+        file_id = update.callback_query.message.text.split('#')[0]
         message = prefix + update.callback_query.message.text
         context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
-        file_id = things[3]
     else:
+        file_id = update.callback_query.message.photo[-1].file_id
         message = prefix + update.callback_query.message.caption
         context.bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=message)
-        file_id = update.callback_query.message.photo[-1].file_id
 
     if (is_approved):
         print_label(sender_chat_id, file_id, is_sticker)
