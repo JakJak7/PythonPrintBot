@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
-from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, CallbackContext
+from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton, Update
 from subprocess import call
 import requests
 import logging
@@ -13,18 +13,18 @@ from wifi_bootstrap import listen_for_connection
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
 
-def photo(bot, update):
+def photo(update: Update, context: CallbackContext):
     #text = update.message.caption
     #if text is None:
     #    text = '20'
     file_id = update.message.photo[-1].file_id
-    handle_image(bot, update, file_id, False)
+    handle_image(update, context, file_id, False)
 
-def sticker(bot, update):
+def sticker(update: Update, context: CallbackContext):
     file_id = update.message.sticker.file_id
-    handle_image(bot, update, file_id, True)
+    handle_image(update, context, file_id, True)
 
-def handle_image(bot, update, file_id, is_sticker):
+def handle_image(update: Update, context: CallbackContext, file_id, is_sticker):
     if (str(update.message.chat_id) == config['BOT_SECRETS']['MasterUserId']):
         print_label(update.message.chat_id, file_id, is_sticker)
     else:
@@ -36,27 +36,30 @@ def handle_image(bot, update, file_id, is_sticker):
                 username = username + " " + update.message.chat.last_name
         else:
             username = "@" + update.message.chat.username
-        ask_master(bot, username, update.message.chat_id, file_id, is_sticker)
+        ask_master(context, username, update.message.chat_id, file_id, is_sticker)
 
 def convert_webp(file_id, file_location):
     call(['dwebp', file_location, '-o', 'files/' + file_id + '.png'])
 
-def ask_master(bot, user_name, chat_id, file_id, is_sticker):
-    base_string = ("T" if is_sticker else "F")+";"+str(chat_id)+";"+file_id
+def ask_master(context: CallbackContext, user_name, chat_id, file_id, is_sticker):
+    base_string = ("T" if is_sticker else "F")+";"+str(chat_id)+";"
+    if (is_sticker):
+        base_string = base_string+file_id
     dataA = "a;"+base_string
     dataB = "b;"+base_string
+    print(file_id)
     items = [[InlineKeyboardButton(text="Approve", callback_data=dataA), InlineKeyboardButton(text="Reject", callback_data=dataB)]]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=items)
     master_user_id = config['BOT_SECRETS']['MasterUserId']
     if (is_sticker):
-        bot.send_message(chat_id=chat_id, text="Queueing sticker...")
-        bot.send_sticker(chat_id=master_user_id, sticker=file_id)
+        context.bot.send_message(chat_id=chat_id, text="Queueing sticker...")
+        context.bot.send_sticker(chat_id=master_user_id, sticker=file_id)
         message = "Sticker from "+user_name + " (" + str(chat_id) + ")"
-        bot.send_message(chat_id=master_user_id, text=message, reply_markup=reply_markup)
+        context.bot.send_message(chat_id=master_user_id, text=message, reply_markup=reply_markup)
     else:
-        bot.send_message(chat_id=chat_id, text="Queueing photo...")
+        context.bot.send_message(chat_id=chat_id, text="Queueing photo...")
         message = user_name + " (" + str(chat_id) + ")"
-        bot.send_photo(chat_id=master_user_id, photo=file_id, caption=message, reply_markup=reply_markup)
+        context.bot.send_photo(chat_id=master_user_id, photo=file_id, caption=message, reply_markup=reply_markup)
 
 def print_label(chat_id, file_id, is_sticker):
     if (is_sticker):
@@ -90,14 +93,14 @@ def lighten_image(file_id, file_extension, percentage):
     call(['convert', file_path, '-fill', 'white', '-colorize', percentage+'%', new_file_path])
     return new_file_id + file_extension
 
-def start(bot, update):
-    send_text_bot(bot, update, 'Send me stickers!')
+def start(update: Update, context: CallbackContext):
+    send_text_bot(update, context, 'Send me stickers!')
 
-def message(bot, update):
-    send_text_bot(bot, update, 'Send me stickers!')
+def message(update: Update, context: CallbackContext):
+    send_text_bot(update, context, 'Send me stickers!')
 
-def send_text_bot(bot, update, message):
-    bot.send_message(chat_id=update.message.chat_id, text=message)
+def send_text_bot(update: Update, context: CallbackContext, message):
+    context.bot.send_message(chat_id=update.message.chat_id, text=message)
 
 def send_to_master(text):
     get_bot().send_message(chat_id=config['BOT_SECRETS']['MasterUserId'], text=text)
@@ -111,7 +114,7 @@ def get_bot():
 config = configparser.ConfigParser()
 config.read('config.ini')
 
-updater = Updater(token=config['BOT_SECRETS']['Token'])
+updater = Updater(token=config['BOT_SECRETS']['Token'], use_context=True)
 dp = updater.dispatcher
 
 start_handler = CommandHandler('start', start)
@@ -126,13 +129,13 @@ dp.add_handler(sticker_handler)
 text_handler = MessageHandler(Filters.text, message)
 dp.add_handler(text_handler)
 
-def callback_handler(bot, query):
+def callback_handler(update: Update, context: CallbackContext):
     # hides inline buttons
-    message_id = query.callback_query.message.message_id
-    chat_id = query.callback_query.message.chat_id
-    bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id)
+    message_id = update.callback_query.message.message_id
+    chat_id = update.callback_query.message.chat_id
+    context.bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id)
 
-    things = query.callback_query.data.split(';')
+    things = update.callback_query.data.split(';')
 
     is_approved = things[0] == "a"
     if (is_approved):
@@ -143,13 +146,13 @@ def callback_handler(bot, query):
     sender_chat_id = things[2]
     is_sticker = things[1] == "T"
     if (is_sticker):
-        message = prefix + query.callback_query.message.text
-        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
+        message = prefix + update.callback_query.message.text
+        context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=message)
         file_id = things[3]
     else:
-        message = prefix + query.callback_query.message.caption
-        bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=message)
-        file_id = query.callback_query.message.photo[-1].file_id
+        message = prefix + update.callback_query.message.caption
+        context.bot.edit_message_caption(chat_id=chat_id, message_id=message_id, caption=message)
+        file_id = update.callback_query.message.photo[-1].file_id
 
     if (is_approved):
         print_label(sender_chat_id, file_id, is_sticker)
