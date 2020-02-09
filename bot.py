@@ -22,7 +22,7 @@ def photo(update: Update, context: CallbackContext):
 
 def sticker(update: Update, context: CallbackContext):
     if (update.message.sticker.is_animated):
-        context.bot.send_message(chat_id=update.message.chat_id, text="Very funny but I can't print this")
+        context.bot.send_message(chat_id=update.message.chat_id, text="Very funny but I can't print this.")
         return
     file_id = update.message.sticker.file_id
     handle_image(update, context, file_id, True)
@@ -112,6 +112,9 @@ def send_text(chat_id, message):
 def get_bot():
     return Bot(token=config['BOT_SECRETS']['Token'])
 
+def document(update: Update, context: CallbackContext):
+    context.bot.send_message(chat_id=update.message.chat_id, text="I can't handle files, please send as image.")
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 
@@ -129,6 +132,9 @@ dp.add_handler(sticker_handler)
 
 text_handler = MessageHandler(Filters.text, message)
 dp.add_handler(text_handler)
+
+file_handler = MessageHandler(Filters.document, document)
+dp.add_handler(file_handler)
 
 def callback_handler(update: Update, context: CallbackContext):
     # hides inline buttons
