@@ -21,6 +21,9 @@ def photo(update: Update, context: CallbackContext):
     handle_image(update, context, file_id, False)
 
 def sticker(update: Update, context: CallbackContext):
+    if (update.message.sticker.is_animated):
+        context.bot.send_message(chat_id=update.message.chat_id, text="Very funny but I can't print this")
+        return
     file_id = update.message.sticker.file_id
     handle_image(update, context, file_id, True)
 
